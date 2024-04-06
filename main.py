@@ -1,9 +1,4 @@
 from fastapi import FastAPI, HTTPException
-from crud import (
-    add_one_student,
-    get_all_students,
-    get_one_student,
-)
 from typing import List, Optional
 from model import Student, StudentInDB
 from database import collection
