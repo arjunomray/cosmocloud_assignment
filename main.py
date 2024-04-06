@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from typing import List, Optional
-from model import Student, StudentInDB
+from model import Student
 from database import collection
 from bson.objectid import ObjectId
 
@@ -24,14 +24,15 @@ async def index():
     }
 
 
-@app.post("/students", response_model=StudentInDB)
+@app.post("/students")
 async def add_students(student: Student):
     res = await collection.insert_one(student.dict())
     student_in_db = await collection.find_one({"_id": res.inserted_id})
-    return StudentInDB(**student_in_db)
+    student_in_db["_id"] = str(res.inserted_id)
+    return student_in_db
 
 
-@app.get("/students", response_model=List[StudentInDB])
+@app.get("/students")
 async def get_students(country: Optional[str] = None, age: Optional[int] = None):
     query = {}
     if country:
@@ -39,10 +40,12 @@ async def get_students(country: Optional[str] = None, age: Optional[int] = None)
     if age:
         query["age"] = {"$gte": age}
     students = await collection.find(query).to_list(100)
-    return [StudentInDB(**student) for student in students]
+    for student in students:
+        student['_id'] = str(student['_id'])
+    return [student for student in students]
 
 
-@app.get("/students/{id}", response_model=StudentInDB)
+@app.get("/students/{id}")
 async def get_one_student(_id: str):
     res = await collection.find_one({"_id": ObjectId(_id)})
     if res is None:
@@ -51,7 +54,7 @@ async def get_one_student(_id: str):
     return res
 
 
-@app.patch("/students/{id}", response_model=StudentInDB)
+@app.patch("/students/{id}")
 async def update_student(id: str, student: Student):
     res = await collection.update_one({"_id": ObjectId(id)},
                                        {"$set":student.dict()}

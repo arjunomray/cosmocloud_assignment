@@ -13,6 +13,3 @@ class Student(BaseModel):
     address: Address
 
 
-class StudentInDB(Student):
-    id: Optional[str] = None
-
