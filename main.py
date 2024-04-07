@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.encoders import jsonable_encoder
 from typing import List, Optional
-from model import Student, StudentUpdate
+from model import Student, StudentUpdate, AddressUpdate
 from database import collection
 from bson.objectid import ObjectId
 
@@ -67,6 +67,12 @@ async def update_student(id: str, student: StudentUpdate):
         raise HTTPException(status_code=404,detail="Student fot found")
     student_in_model = Student(**student_in_db)
     update_values = student.model_dump(exclude_unset=True)
+    stored_address = student_in_model.address.model_dump()
+    if update_values['address'] is not None:
+        for key, value in stored_address.items():
+            if key not in update_values['address']:
+                update_values['address'][key] = value
+
     updated_student = student_in_model.model_copy(update=update_values)
     res = await collection.update_one({"_id": ObjectId(id)},
                                       {"$set": jsonable_encoder(updated_student)}
