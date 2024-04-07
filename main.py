@@ -27,15 +27,16 @@ async def index():
     }
 
 
-@app.post("/students")
+@app.post("/students", status_code=201)
 async def add_students(student: Student):
     res = await collection.insert_one(student.dict())
     student_in_db = await collection.find_one({"_id": res.inserted_id})
-    student_in_db["_id"] = str(res.inserted_id)
+    student_in_db["id"] = str(student_in_db["_id"])
+    del student_in_db["_id"]
     return student_in_db
 
 
-@app.get("/students")
+@app.get("/students", status_code=200)
 async def get_students(country: Optional[str] = None, age: Optional[int] = None):
     query = {}
     if country:
@@ -44,20 +45,22 @@ async def get_students(country: Optional[str] = None, age: Optional[int] = None)
         query["age"] = {"$gte": age}
     students = await collection.find(query).to_list(100)
     for student in students:
-        student['_id'] = str(student['_id'])
+        student['id'] = str(student['_id'])
+        del student['_id']
     return [student for student in students]
 
 
-@app.get("/students/{id}")
+@app.get("/students/{id}", status_code=200)
 async def get_one_student(_id: str):
     res = await collection.find_one({"_id": ObjectId(_id)})
     if res is None:
         raise HTTPException(status_code=404, detail="Student not found")
-    res['_id'] = str(res['_id'])
+    res['id'] = str(res['_id'])
+    del res['_id']
     return res
 
 
-@app.patch("/students/{id}", response_model=Student)
+@app.patch("/students/{id}", status_code=204)
 async def update_student(id: str, student: StudentUpdate):
     student_in_db = await collection.find_one({"_id": ObjectId(id)})
     if student_in_db is None:
@@ -71,11 +74,12 @@ async def update_student(id: str, student: StudentUpdate):
     if res.modified_count == 0:
         raise HTTPException(status_code=400, detail="update failed")
     updated_student = await collection.find_one({"_id": ObjectId(id)})
-    updated_student['_id'] = str(updated_student['_id'])
-    return Student(**updated_student)
+    updated_student['id'] = str(updated_student['_id'])
+    del updated_student['_id']
+    return updated_student
 
 
-@app.delete("/students/{id}")
+@app.delete("/students/{id}", status_code=200)
 async def delete_student(id: str):
     res = await collection.delete_one({"_id": ObjectId(id)})
     if res.deleted_count == 0:
